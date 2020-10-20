@@ -14,6 +14,9 @@ import 'Objeto.dart';
 import 'package:path/path.dart';
 import 'package:flutter/services.dart';
 
+import 'network/model/app_upload_model.dart';
+final GlobalKey<NavigatorState> navigatorState = GlobalKey();
+
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -21,6 +24,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorState,
       title: 'Correios SOAP Flutter',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -62,7 +66,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             FlatButton(
               color: Colors.grey,
-              child: Text("download"),
+              child: Text("download db"),
               onPressed: _download,
             ),
             FlatButton(
@@ -74,6 +78,13 @@ class _MyHomePageState extends State<MyHomePage> {
               color: Colors.grey,
               child: Text("覆盖"),
               onPressed: _cover,
+            ),
+            FlatButton(
+              color: Colors.grey,
+              child: Text("下载APK 安装"),
+              onPressed:(){
+                ApkUploadModel().downloadAndInstall(context);
+              },
             ),
           ],
         ),
@@ -149,7 +160,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   _download() async {
     Directory dir = await getExternalStorageDirectory();
-    String dest = join(dir.path, "data_access.db");
+    var dbPath = await getDatabasesPath();
+    String dest = join(dbPath, "data_access.db");
     print("dest" + dest);
 
     Dio dio = new Dio();
@@ -185,18 +197,21 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _cover() async {
     var dbPath = await getDatabasesPath();
-    var docFilePath = join(dbPath, "data_access.db");
-    var exists = await databaseExists(docFilePath);
+    print("dbPath="+dbPath);
+    // var sdPath = await getExternalStorageDirectory();
+    var targetPath = join(dbPath, "data_access.db");
+    var exists = await databaseExists(targetPath);
     if(!exists){
+      print("first load");
       ByteData data = await rootBundle.load(join("assets/database", "data_access.db"));
       List<int> bytes = data.buffer.asInt8List(data.offsetInBytes, data.lengthInBytes);
-      await File(docFilePath).writeAsBytes(bytes, flush: true);
-      print("first load suc");
+      await File(targetPath).writeAsBytes(bytes, flush: true);
+      print("first loaded");
     }else{
       print("cover");
-      ByteData data = await rootBundle.load(join("assets/database_cover", "data_access.db"));
+      ByteData data = await rootBundle.load(join("assets/database_cover", "ss_cover.db"));
       List<int> bytes = data.buffer.asInt8List(data.offsetInBytes, data.lengthInBytes);
-      await File(docFilePath).writeAsBytes(bytes, flush: true);
+      await File(targetPath).writeAsBytes(bytes, flush: true);
       print("covered");
 
     }
